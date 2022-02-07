@@ -1,23 +1,18 @@
-# Skeleton Project
+# Device update runner
 
-This is a skeleton template for a TypeScript library project, containing all the default files and settings required for a balena project.
-As a result package-lock files are disabled so that upstream dependency issues are surfaces on our CI.
-In case that you are implementing a standalone project, you can enable them by deleting the `.npmrc`.
+Receives one or more devices to control, accessible through a given device API key and updates them in sequence through a list of releases.
+This is intended to test the robustness of the update process of a balena app and catch any issues that may occur.
 
-Modify the `package.json`, and README.md file as required, `npm install`, then implement code in the `lib` directory. 
+## Environment variables
 
-Compiled code will be output into the `build` directory (transpiled JS, declaration files and source maps).
+**Required variables**
 
-`npm test` will run the tests on both node and a browser.
-In case that you are implementing a node only library, you can just just drop karma.conf.js and all karma related references in the package.json.
+- `BALENA_API_KEY`, user API key with access to the balena devices
+- `BALENA_DEVICES`, comma separated list of device uuids to update
+- `BALENA_RELEASES`, comma separated list of release uuids to cycle through (must be >=2)
 
-## Integrating with balenaCI
+**Optional variables**
 
-After cloning & scaffolding the repository
-* Reset the package.json version to the desired one for the initial release, eg `0.1.0`.
-* Delete the CHANGELOG.md & .versionbot folder.
-* Set the appropriate .github/CODEOWNERS.
-* Push the scaffolded project to `master`
-* Create a new branch and open a PR for it.
-* After balenaCI picks up the PR, go to the repository's settings page and add a
-  `master` branch protection rule and mark the balenaCI checks as required.
+- `API_ENDPOINT`, defaults to `https://api.balena-cloud.com`, set to a diferent value to run against a different environment
+- `UPDATE_INTERVAL`, defaults to `300000` (ms), this is the time the runner will wait before checking for a successful update as well as the interval between updates
+
