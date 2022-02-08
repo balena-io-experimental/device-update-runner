@@ -1,0 +1,5 @@
+Dockerfile.template
+build/
+node_modules/
+CHANGELOG.md
+README.md

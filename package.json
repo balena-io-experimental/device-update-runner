@@ -1,27 +1,28 @@
 {
-  "name": "balena-typescript-skeleton",
+  "name": "device-update-runner",
   "version": "2.1.0",
   "description": "Skeleton template for a balena TypeScript project",
-  "homepage": "https://github.com/balena-io/balena-typescript-skeleton#readme",
+  "homepage": "https://github.com/balena-io-playground/device-update-runner#readme",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "keywords": [
     "balena",
     "typescript"
   ],
-  "author": "",
+  "author": "Felipe Lalanne <felipe@balena.io>",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/balena-io/balena-typescript-skeleton.git"
+    "url": "git+https://github.com/balena-io-playground/device-update-runner.git"
   },
   "bugs": {
-    "url": "https://github.com/balena-io/balena-typescript-skeleton/issues"
+    "url": "https://github.com/balena-io-playground/device-update-runner/issues"
   },
   "files": [
     "build/"
   ],
   "scripts": {
+    "start": "node build/index.js",
     "dev": "ts-node lib/index.ts",
     "clean": "rimraf build",
     "build": "npm run clean && tsc",
