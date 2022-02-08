@@ -7,9 +7,9 @@ This is intended to test the robustness of the update process of a balena app an
 
 **Required variables**
 
-- `BALENA_API_KEY`, user API key with access to the balena devices
-- `BALENA_DEVICES`, comma separated list of device uuids to update
-- `BALENA_RELEASES`, comma separated list of release uuids to cycle through (must be >=2)
+- `API_KEY`, user API key with access to the balena devices
+- `TEST_DEVICES`, comma separated list of device uuids to update
+- `TEST_RELEASES`, comma separated list of release uuids to cycle through (must be >=2)
 
 **Optional variables**
 

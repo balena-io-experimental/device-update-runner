@@ -4,7 +4,7 @@ import { createMachine, assign, interpret } from 'xstate';
 
 import { getSdk, Device } from 'balena-sdk';
 
-const env = ['BALENA_API_KEY', 'BALENA_DEVICES', `BALENA_RELEASES`];
+const env = ['API_KEY', 'TEST_DEVICES', `TEST_RELEASES`];
 
 // Check required configs first
 const config = env
@@ -27,8 +27,8 @@ const UPDATE_INTERVAL =
 		? parseInt(process.env.UPDATE_INTERVAL, 10)
 		: 300000;
 
-if (config.BALENA_RELEASES.length < 2) {
-	throw new Error(`Expected BALENA_RELEASE to contain at least 2 values`);
+if (config.TEST_RELEASES.length < 2) {
+	throw new Error(`Expected TEST_RELEASES to contain at least 2 values`);
 }
 
 // SDK
@@ -49,7 +49,7 @@ async function delay(ms: number) {
 }
 
 async function pinToNextRelease(devices: Device[]): Promise<string[]> {
-	const nextRelease = config.BALENA_RELEASES[count];
+	const nextRelease = config.TEST_RELEASES[count];
 
 	devices
 		.filter((d) => !d.is_online)
@@ -65,7 +65,7 @@ async function pinToNextRelease(devices: Device[]): Promise<string[]> {
 	);
 
 	// Rotate over the release list
-	count = (count + 1) % config.BALENA_RELEASES.length;
+	count = (count + 1) % config.TEST_RELEASES.length;
 
 	console.log(
 		`Waiting ${
@@ -110,7 +110,7 @@ const updater = createMachine<{ uuids: string[] }>({
 	id: 'updater',
 	initial: 'updating',
 	context: {
-		uuids: config.BALENA_DEVICES,
+		uuids: config.TEST_DEVICES,
 	},
 	states: {
 		waiting: {
@@ -174,7 +174,7 @@ app.post('/reset', async (_, res) => {
 
 app.listen(3000, async () => {
 	// Login to balena
-	await balena.auth.loginWithToken(config.BALENA_API_KEY[0]);
+	await balena.auth.loginWithToken(config.API_KEY[0]);
 
 	// Start updating
 	cancel = start();
