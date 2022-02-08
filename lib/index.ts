@@ -1,5 +1,6 @@
 import cors from 'cors';
 import express from 'express';
+import { createMachine, assign, interpret } from 'xstate';
 
 import { getSdk, Device } from 'balena-sdk';
 
@@ -47,7 +48,7 @@ async function delay(ms: number) {
 	return await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function pinToNextRelease(devices: Device[]) {
+async function pinToNextRelease(devices: Device[]): Promise<string[]> {
 	const nextRelease = config.BALENA_RELEASES[count];
 
 	devices
@@ -87,45 +88,87 @@ async function pinToNextRelease(devices: Device[]) {
 	});
 
 	// Log
-	updated.forEach((d) => {
-		if (d.is_running__release?.[0]?.commit === nextRelease) {
-			console.log(
-				`Device ${d.uuid} successfully pinned to release ${nextRelease}`,
-			);
-		} else {
-			console.error(
-				`Device ${d.uuid} failed to update to release ${nextRelease}`,
-			);
-		}
-	});
+	return updated
+		.map((d) => {
+			if (d.is_running__release?.[0]?.commit === nextRelease) {
+				console.log(
+					`Device ${d.uuid} successfully pinned to release ${nextRelease}`,
+				);
+				return d.uuid;
+			} else {
+				console.error(
+					`Device ${d.uuid} failed to update to release ${nextRelease}. Ignoring for next release`,
+				);
+				return null;
+			}
+		})
+		.filter((d) => d != null) as string[];
 }
 
-async function update(): Promise<void> {
-	try {
-		const devices = await Promise.all(
-			config.BALENA_DEVICES.map((uuid) => balena.models.device.get(uuid)),
-		);
-		await pinToNextRelease(devices);
-	} catch (e) {
-		console.error(
-			`Failed to update devices to next release, retrying in ${
-				UPDATE_INTERVAL / 1000
-			}s`,
-		);
-	}
+// Use a state machine to control the update cycle
+const updater = createMachine<{ uuids: string[] }>({
+	id: 'updater',
+	initial: 'updating',
+	context: {
+		uuids: config.BALENA_DEVICES,
+	},
+	states: {
+		waiting: {
+			entry: () =>
+				console.log(`Waiting ${UPDATE_INTERVAL / 1000}s for next release`),
+			after: { [UPDATE_INTERVAL]: 'updating' },
+		},
+		updating: {
+			invoke: {
+				id: 'update',
+				src: (context) =>
+					// Get the list of device data and pin to next release
+					Promise.all(
+						context.uuids.map((uuid) => balena.models.device.get(uuid)),
+					).then((devices) => pinToNextRelease(devices)),
+				onDone: {
+					target: 'waiting',
+					// pinToNextRelease returns the uuids of the devices still running
+					actions: assign({ uuids: (_, event) => event.data }),
+				},
+				onError: {
+					target: 'waiting',
+					actions: (c, e) => {
+						console.error('Failed to update devices to next release', c, e);
+					},
+				},
+			},
+		},
+		cancelled: {
+			type: 'final',
+		},
+	},
+	on: {
+		CANCEL: {
+			target: 'cancelled',
+			actions: () => console.log('Stopped update cycle'),
+		},
+	},
+});
 
-	// Wait 5 minutes before trying next release
-	delay(UPDATE_INTERVAL);
+let cancel = () => {
+	/* do nothing by default */
+};
 
-	return update();
+function start() {
+	const i = interpret(updater).start();
+
+	return () => i.send('CANCEL');
 }
 
-// Endpoint to trigger immediate update
-app.post('/update', async (_, res) => {
-	const devices = await Promise.all(
-		config.BALENA_DEVICES.map((uuid) => balena.models.device.get(uuid)),
-	);
-	await pinToNextRelease(devices);
+// Endpoint to trigger immediate update on all devices
+app.post('/reset', async (_, res) => {
+	/* stop the previouse execution */
+	cancel();
+
+	/* start a new instance */
+	cancel = start();
+
 	res.status(201).send('OK');
 });
 
@@ -134,7 +177,7 @@ app.listen(3000, async () => {
 	await balena.auth.loginWithToken(config.BALENA_API_KEY[0]);
 
 	// Start updating
-	update();
+	cancel = start();
 
 	console.log('Server listening on port 3000');
 });
