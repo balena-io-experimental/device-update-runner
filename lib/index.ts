@@ -116,7 +116,17 @@ const updater = createMachine<{ uuids: string[] }>({
 		waiting: {
 			entry: () =>
 				console.log(`Waiting ${UPDATE_INTERVAL / 1000}s for next release`),
-			after: { [UPDATE_INTERVAL]: 'updating' },
+			after: {
+				[UPDATE_INTERVAL]: [
+					// only go to next update if there are uuids to test
+					{ target: 'updating', cond: (context) => context.uuids.length > 0 },
+					{
+						target: 'finished',
+						actions: () =>
+							console.log('No devices available to update. Finishing'),
+					},
+				],
+			},
 		},
 		updating: {
 			invoke: {
@@ -139,13 +149,13 @@ const updater = createMachine<{ uuids: string[] }>({
 				},
 			},
 		},
-		cancelled: {
+		finished: {
 			type: 'final',
 		},
 	},
 	on: {
 		CANCEL: {
-			target: 'cancelled',
+			target: 'finished',
 			actions: () => console.log('Stopped update cycle'),
 		},
 	},
